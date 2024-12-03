@@ -68,7 +68,7 @@ fashion_styles = [
 
 check_pc_index(index_name=index_name)
 
-test_string = "I'm going out to a nice restuarant tonight for a date, what should I wear? I'm a guy."
+test_string = "I want to go on a hike but still look hella stylish."
 
 closest_results = getRelevantStyles(test_string, index_name=index_name)
 
@@ -80,3 +80,4 @@ for result in closest_results:
     else:
         print("not close enough: " + fashion_styles[index].split(":")[0])
         print(result[1])
+
