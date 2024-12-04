@@ -1,23 +1,25 @@
 .env
 __pycache__
 
+**/build/
+
 # Miscellaneous
 *.class
 *.log
 *.pyc
 *.swp
-.DS_Store
-.atom/
-.buildlog/
-.history
-.svn/
-migrate_working_dir/
+**/.DS_Store
+**/.atom/
+**/.buildlog/
+flutterapp/.history
+flutterapp/.svn/
+flutterapp/migrate_working_dir/
 
 # IntelliJ related
 *.iml
 *.ipr
 *.iws
-.idea/
+flutterapp/.idea/
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
@@ -27,12 +29,12 @@ migrate_working_dir/
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
+flutterapp/.dart_tool/
+flutterapp/.flutter-plugins
+flutterapp/.flutter-plugins-dependencies
+flutterapp/.pub-cache/
+flutterapp/.pub/
+**/build/
 
 # Symbolication related
 app.*.symbols
@@ -41,6 +43,6 @@ app.*.symbols
 app.*.map.json
 
 # Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+flutterapp/android/app/debug
+flutterapp/android/app/profile
+flutterapp/android/app/release
