@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'camera.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -12,6 +13,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
   await dotenv.load();
+  await Supabase.initialize(
+    url: 'https://idzbxusgiufdpxygfnlu.supabase.co',
+    anonKey: dotenv.env['SUPABASE_KEY']!,
+  );
 
   runApp(MaterialApp(home: MyApp()));
 }
@@ -34,6 +39,7 @@ class _MyAppState extends State<MyApp> {
     // Check if the platform is not web, as web has no permissions
       // Request storage permission
       var status = await Permission.storage.status;
+
       if (!status.isGranted) {
         await Permission.storage.request();
       }

@@ -249,33 +249,48 @@ class _ImageViewPageState extends State<ImageViewPage> {
 
     // final String supabaseUrl = dotenv.env['SUPABASE_URL']!;
     String supabaseKey = dotenv.env['SUPABASE_KEY']!;
-    print(supabaseKey);
+    // print(supabaseKey);
     List imageUrls = [];
 
     for (String i in styleMatches){
       final String selectedStyle = i.toLowerCase(); // Assuming the first match is the selected style
 
-      print(selectedStyle);
-      final Uri supabaseUrl = Uri.parse('https://idzbxusgiufdpxygfnlu.supabase.co/rest/v1/FitReferences?select=*');
-      
-      final supabaseResponse = await http.get(
-        supabaseUrl,
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': 'Bearer $supabaseKey',
-          'Content-Type': 'application/json',
-        },
-      );
+      // print(selectedStyle);
+      SupabaseClient client = Supabase.instance.client;
+      var supabaseResponse = await client.from("FitReferences").select("image_url").eq("label", selectedStyle);
 
-      if (supabaseResponse.statusCode == 200) {
-        print(supabaseResponse.body);
-        List<dynamic> imageUrls = jsonDecode(supabaseResponse.body);
-        print('Image URLs:');
-        print(imageUrls);
+      if (supabaseResponse != null) {
+        // Map the rows to a list of image_url strings
+        List<String> imageUrls = (supabaseResponse as List<dynamic>)
+            .map((row) => row['image_url'] as String)
+            .toList();
+        for (String i in imageUrls){
+          print(i);
+        }
       } else {
-        print('Error: ${supabaseResponse.statusCode}');
-        print(supabaseResponse.body);
+        print('Error: ${supabaseResponse}');
       }
+
+      // final Uri supabaseUrl = Uri.parse('https://idzbxusgiufdpxygfnlu.supabase.co/rest/v1/FitReferences?select=*');
+      
+      // final supabaseResponse = await http.get(
+      //   supabaseUrl,
+      //   headers: {
+      //     'apikey': supabaseKey,
+      //     'Authorization': 'Bearer $supabaseKey',
+      //     'Content-Type': 'application/json',
+      //   },
+      // );
+
+      // if (supabaseResponse.statusCode == 200) {
+      //   print(supabaseResponse.body);
+      //   List<dynamic> imageUrls = jsonDecode(supabaseResponse.body);
+      //   print('Image URLs:');
+      //   print(imageUrls);
+      // } else {
+      //   print('Error: ${supabaseResponse.statusCode}');
+      //   print(supabaseResponse.body);
+      // }
     }
     return;
 
