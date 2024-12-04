@@ -4,12 +4,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'camera.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 List<CameraDescription> cameras = [];
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
+  await dotenv.load();
 
   runApp(MaterialApp(home: MyApp()));
 }
