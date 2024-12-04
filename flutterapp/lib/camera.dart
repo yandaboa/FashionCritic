@@ -130,6 +130,8 @@ class _ImageViewPageState extends State<ImageViewPage> {
   String userInput = "";
   int userInputLength = 0;
 
+  String feedbackPrompt = "The first image shows the current outfit. The rest of the images show the aesthetics/styles that the user wants to capture with their outfit. Give specific advice for someone who wants to change their style from the first image to a comprehensive but coherent aggregation of the rest. Briefly describe the differences in styles, and then give actionable advice on what clothing pieces to buy or thrift for. Specifically, give advice for only: top, bottoms, shoes, accessories.\n\nExample of output format (don't use anything other than plain text and colons):\nAdvice: Yo, you're dressing quite casually. Usually, formal ware conveys a more professional demeanor, and that's not what your shoes and shirt communicate.\nTop: Grab a button shirt t-shirt. Look for a high-quality cotton shirt with a smooth finish, like poplin or twill. Ensure it fits well (tailored or slim-fit for a modern look).\nWhere: Zara, Uniqlo, Men's Wearhouse.\nPants: The darker jeans you have are quite nice. Perhaps go with dress pants if you want more formal. Choose trousers made of high-quality wool or a wool blend for a polished, formal look. Flat-front trousers are sleek and modern, ideal for slimmer builds. Pleated trousers offer extra comfort and room, suitable for more traditional formal outfits.\nWhere: Men's Wearhouse, Levi's\n...";
+
   List fashionStyles = [
     "Casual: Relaxed and comfortable clothing for everyday wear. Common pieces include jeans, T-shirts, sneakers, hoodies, and simple dresses.",
     "Professional: Tailored and polished outfits suitable for work or formal settings. Common pieces include blazers, dress shirts, trousers, pencil skirts, and loafers.",
@@ -261,41 +263,39 @@ class _ImageViewPageState extends State<ImageViewPage> {
 
       if (supabaseResponse != null) {
         // Map the rows to a list of image_url strings
-        List<String> imageUrls = (supabaseResponse as List<dynamic>)
+        List<String> urls = (supabaseResponse as List<dynamic>)
             .map((row) => row['image_url'] as String)
             .toList();
-        for (String i in imageUrls){
-          print(i);
+        for (String i in urls){
+          imageUrls.add(i);
         }
       } else {
         print('Error: ${supabaseResponse}');
       }
-
-      // final Uri supabaseUrl = Uri.parse('https://idzbxusgiufdpxygfnlu.supabase.co/rest/v1/FitReferences?select=*');
-      
-      // final supabaseResponse = await http.get(
-      //   supabaseUrl,
-      //   headers: {
-      //     'apikey': supabaseKey,
-      //     'Authorization': 'Bearer $supabaseKey',
-      //     'Content-Type': 'application/json',
-      //   },
-      // );
-
-      // if (supabaseResponse.statusCode == 200) {
-      //   print(supabaseResponse.body);
-      //   List<dynamic> imageUrls = jsonDecode(supabaseResponse.body);
-      //   print('Image URLs:');
-      //   print(imageUrls);
-      // } else {
-      //   print('Error: ${supabaseResponse.statusCode}');
-      //   print(supabaseResponse.body);
-      // }
     }
-    return;
 
+    setState(() {
+      statusMessage = "Generating feedback...";
+    });
 
     final Uri openaiurl = Uri.parse('https://api.openai.com/v1/chat/completions');
+
+    String finalPrompt = "$feedbackPrompt\n\nFinally, consider the user prompt: $userInput";
+
+    List messages = [];
+    messages.add(
+            {'type': 'text', 'text': finalPrompt}
+          );
+    
+    messages.add(
+        {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}}
+      );
+  
+    for (String i in imageUrls){
+      messages.add(
+            {'type': 'image_url', 'image_url': {'url': i}}
+          );
+    }
 
     final response = await http.post(
       openaiurl,
@@ -306,16 +306,9 @@ class _ImageViewPageState extends State<ImageViewPage> {
       body: jsonEncode({
         'model': 'gpt-4o',
         'messages': [
-          {'role': 'user', 'content': [
-            {'type': 'text', 'data': {'text': 'I want to know what to wear'}}
-          ]},
-          {'role': 'user', 'content': [
-            {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}}
-          ]},
-          {'role': 'assistant', 'content': [
-            {'type': 'text', 'data': {'text': userInput}}
-          ]}
-        ]
+          {'role': 'user', 
+          'content': messages},
+        ],
       }),
     );
 
