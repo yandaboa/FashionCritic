@@ -10,7 +10,6 @@ import 'package:http/http.dart' as http;
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 class CameraPage extends StatefulWidget {
   final BuildContext context;
   final List<CameraDescription> cameras;
@@ -130,7 +129,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
   String userInput = "";
   int userInputLength = 0;
 
-  String feedbackPrompt = "The first image shows the current outfit. The rest of the images show the aesthetics/styles that the user wants to capture with their outfit. Give specific advice for someone who wants to change their style from the first image to a comprehensive but coherent aggregation of the rest. Briefly describe the differences in styles, and then give actionable advice on what clothing pieces to buy or thrift for. Specifically, give advice for only: top, bottoms, shoes, accessories.\n\nExample of output format (don't use anything other than plain text and colons):\nAdvice: Yo, you're dressing quite casually. Usually, formal ware conveys a more professional demeanor, and that's not what your shoes and shirt communicate.\nTop: Grab a button shirt t-shirt. Look for a high-quality cotton shirt with a smooth finish, like poplin or twill. Ensure it fits well (tailored or slim-fit for a modern look).\nWhere: Zara, Uniqlo, Men's Wearhouse.\nPants: The darker jeans you have are quite nice. Perhaps go with dress pants if you want more formal. Choose trousers made of high-quality wool or a wool blend for a polished, formal look. Flat-front trousers are sleek and modern, ideal for slimmer builds. Pleated trousers offer extra comfort and room, suitable for more traditional formal outfits.\nWhere: Men's Wearhouse, Levi's\n...";
+  String feedbackPrompt = "The first image should show the current outfit. If it doesn't, say that, and don't generate advice. If it is a human, proceed. The rest of the images show the aesthetics/styles that the user wants to capture with their outfit. Give specific advice for someone who wants to change their style from the first image to a comprehensive but coherent aggregation of the rest. Briefly describe the differences in styles, and then give actionable advice on what clothing pieces to buy or thrift for. Specifically, give advice for only: top, bottoms, shoes, accessories.\n\nExample of output format (don't use anything other than plain text and colons):\nAdvice: Yo, you're dressing quite casually. Usually, formal ware conveys a more professional demeanor, and that's not what your shoes and shirt communicate.\nTop: Grab a button shirt t-shirt. Look for a high-quality cotton shirt with a smooth finish, like poplin or twill. Ensure it fits well (tailored or slim-fit for a modern look).\nWhere: Zara, Uniqlo, Men's Wearhouse.\nPants: The darker jeans you have are quite nice. Perhaps go with dress pants if you want more formal. Choose trousers made of high-quality wool or a wool blend for a polished, formal look. Flat-front trousers are sleek and modern, ideal for slimmer builds. Pleated trousers offer extra comfort and room, suitable for more traditional formal outfits.\nWhere: Men's Wearhouse, Levi's\n...";
 
   List fashionStyles = [
     "Casual: Relaxed and comfortable clothing for everyday wear. Common pieces include jeans, T-shirts, sneakers, hoodies, and simple dresses.",
@@ -144,6 +143,13 @@ class _ImageViewPageState extends State<ImageViewPage> {
     "Romantic: Feminine and delicate, with an emphasis on soft fabrics and pretty details. Common pieces include lace blouses, floral dresses, ruffles, and pastel colors.",
     "Edgy: Bold and rebellious, often inspired by punk or rock aesthetics. Common pieces include leather jackets, ripped jeans, combat boots, and dark tones."
   ];
+
+  //after statusMessage == "success", these should be populated with the AI recommendations:
+  String generalAdvice = "";
+  String topAdvice = "";
+  String bottomAdvice = ""; 
+  String shoeAdvice = "";
+  String accessoryAdvice = "";
 
   String openaiApiKey = "";
 
@@ -160,7 +166,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
       statusMessage = "Generating embeddings...";
     });
     Uint8List imageBytes = await File(widget.imagePath).readAsBytes();
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
     String base64Image = base64Encode(imageBytes);
 
     final Uri embeddingsurl = Uri.parse("https://api.openai.com/v1/embeddings");
@@ -291,10 +297,11 @@ class _ImageViewPageState extends State<ImageViewPage> {
         {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}}
       );
   
-    for (String i in imageUrls){
-      messages.add(
-            {'type': 'image_url', 'image_url': {'url': i}}
-          );
+    for (int i = 0; i < 3; i++){
+        print(imageUrls[i]);
+        messages.add(
+              {'type': 'image_url', 'image_url': {'url': imageUrls[i]}}
+            );
     }
 
     final response = await http.post(
@@ -315,14 +322,20 @@ class _ImageViewPageState extends State<ImageViewPage> {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       print(data['choices'][0]['message']['content']);
+      setState(() {
+        isLoading = false;
+        statusMessage = "success";
+        generalAdvice = data['choices'][0]['message']['content'].split("Top:")[0].trim();
+        topAdvice = data['choices'][0]['message']['content'].split("Top:")[1].split("Bottoms:")[0].trim();
+        bottomAdvice = data['choices'][0]['message']['content'].split("Bottoms:")[1].split("Shoes:")[0].trim();
+        shoeAdvice = data['choices'][0]['message']['content'].split("Shoes:")[1].split("Accessories:")[0].trim();
+        accessoryAdvice = data['choices'][0]['message']['content'].split("Accessories:")[1].trim();
+      });
     } else {
       print('Error: ${response.statusCode}');
       print(response.body);
+      return;
     }
-    
-    setState(() {
-      isLoading = false;
-    });
     // Call the API to get feedback
   }
 
@@ -340,7 +353,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
             child: Image.file(File(widget.imagePath)), //TODO: delay rest of page until image is loaded
             ),
             const SizedBox(height: 20), // Add padding here
-            if (!isLoading)
+            if (!isLoading && statusMessage != "success")
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: Center(
@@ -351,7 +364,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
                     , style: TextStyle(color: Colors.green)),
                 )
               )),
-            if(!isLoading)
+            if(!isLoading && statusMessage != "success")
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
               child: TextField(
@@ -368,7 +381,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
                 },
               ),
             ),
-            if (!isLoading) 
+            if (!isLoading && statusMessage != "success") 
             SizedBox(
             width: double.infinity, // Make the button take the full width
             child: FloatingActionButton.extended(
@@ -394,6 +407,101 @@ class _ImageViewPageState extends State<ImageViewPage> {
                 child: CircularProgressIndicator(strokeWidth: 2.0),
               ),
               ],
+            ),
+            if (statusMessage == "success")
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Container(
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[50], // Background color
+                borderRadius: BorderRadius.circular(12.0), // Rounded corners
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                generalAdvice,
+                style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurpleAccent,
+                ),
+              ),
+              ),
+            ),
+            if(statusMessage == "success")
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Container(
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[50], // Background color
+                borderRadius: BorderRadius.circular(12.0), // Rounded corners
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                topAdvice,
+                style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurpleAccent,
+                ),
+              ),
+              ),
+            ),
+            if(statusMessage == "success")
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Container(
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[50], // Background color
+                borderRadius: BorderRadius.circular(12.0), // Rounded corners
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                bottomAdvice,
+                style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurpleAccent,
+                ),
+              ),
+              ),
+            ),
+            if(statusMessage == "success")
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Container(
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[50], // Background color
+                borderRadius: BorderRadius.circular(12.0), // Rounded corners
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                shoeAdvice,
+                style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurpleAccent,
+                ),
+              ),
+              ),
+            ),
+            if(statusMessage == "success")
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Container(
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[50], // Background color
+                borderRadius: BorderRadius.circular(12.0), // Rounded corners
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                accessoryAdvice,
+                style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurpleAccent,
+                ),
+              ),
+              ),
             ),
         ],
       ),

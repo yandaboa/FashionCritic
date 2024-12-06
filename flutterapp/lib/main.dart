@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'camera.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'closet.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -59,14 +60,25 @@ class _MyAppState extends State<MyApp> {
       appBar: StandardAppBar(
         title: "Fashion Critic"),
       body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            Navigator.of(
-              context).push(
-              MaterialPageRoute(builder: (context) => CameraPage(context: context, cameras: cameras,)),
-            );
-          },
-          child: Icon(Icons.camera_alt),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(
+                  context).push(
+                  MaterialPageRoute(builder: (context) => CameraPage(context: context, cameras: cameras,)),
+                );
+              },
+              child: Icon(Icons.camera_alt),
+            ),
+            ElevatedButton(onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => Closet(context: context, cameras: cameras,)),
+              );
+            },
+            child: Icon(Icons.home))
+          ]
         ),
       ),
     )
