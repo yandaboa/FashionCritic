@@ -7,6 +7,7 @@ import 'camera.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'closet.dart';
+import 'closetViewer.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -77,13 +78,13 @@ class _MyAppState extends State<MyApp> {
                 MaterialPageRoute(builder: (context) => Closet(context: context, cameras: cameras,)),
               );
             },
-            child: Icon(Icons.home)),
+            child: Icon(Icons.add)),
             ElevatedButton(onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => Closet(context: context, cameras: cameras,)),
+                MaterialPageRoute(builder: (context) => ClosetViewer()),
               );
             },
-            child: const Icon(Icons.dataset))
+            child: const Icon(Icons.home)),
           ]
         ),
       ),

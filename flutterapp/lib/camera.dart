@@ -151,6 +151,8 @@ class _ImageViewPageState extends State<ImageViewPage> {
   String shoeAdvice = "";
   String accessoryAdvice = "";
 
+  String closetPieces = "";
+
   String openaiApiKey = "";
 
   @override
@@ -220,7 +222,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
     });
     String pineconeAPIKey = dotenv.env['PINECONE_API_KEY']!;
 
-    final Uri pineconeurl = Uri.parse("https://fit-labels-qz22kzx.svc.aped-4627-b74a.pinecone.io/query");
+    Uri pineconeurl = Uri.parse("https://fit-labels-qz22kzx.svc.aped-4627-b74a.pinecone.io/query");
     final pineconeResponse = await http.post(
       pineconeurl,
       headers: {
@@ -327,12 +329,12 @@ class _ImageViewPageState extends State<ImageViewPage> {
       }),
     );
 
+    String responseContent = "";
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      print(data['choices'][0]['message']['content']);
+      responseContent = data['choices'][0]['message']['content'];
       setState(() {
-        isLoading = false;
-        statusMessage = "success";
         generalAdvice = data['choices'][0]['message']['content'].split("Top:")[0].trim();
         topAdvice = data['choices'][0]['message']['content'].split("Top:")[1].split("Bottoms:")[0].trim();
         bottomAdvice = data['choices'][0]['message']['content'].split("Bottoms:")[1].split("Shoes:")[0].trim();
@@ -344,6 +346,42 @@ class _ImageViewPageState extends State<ImageViewPage> {
       print(response.body);
       return;
     }
+
+    setState(() {
+      statusMessage = "Referencing your closet...";
+    });
+
+    var recommendationVector = await getEmbedding(responseContent);
+    if(recommendationVector.length == 0) {
+      closetPieces = "Error suggesting pieces from the closet";
+    } else {
+      pineconeurl = Uri.parse(dotenv.env['PINECONE_CLOSET_URL']! + "/query");
+
+      final pineconeResponse = await http.post(
+        pineconeurl,
+        headers: {
+          'Api-key': pineconeAPIKey,
+          'Content-Type': 'application/json',
+          // 'X-Pinecone-API-Version': '2024-07'
+        },
+        body: jsonEncode({
+          'topK': 3,
+          'vector': recommendationVector
+          }
+        )
+      );
+
+      for (var i in jsonDecode(pineconeResponse.body)['matches']){
+        closetPieces += i['id'] + "\n";
+        print(i['score']);
+      }
+    }
+
+    setState(() {
+      isLoading = false;
+      statusMessage = "success";
+    });
+
     // Call the API to get feedback
   }
 
@@ -507,6 +545,43 @@ class _ImageViewPageState extends State<ImageViewPage> {
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,
                 color: Colors.deepPurpleAccent,
+                ),
+              ),
+              ),
+            ),
+            if(statusMessage == "success")
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Container(
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[50], // Background color
+                borderRadius: BorderRadius.circular(12.0), // Rounded corners
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'A few pieces from your closet...',
+                style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                ),
+              ),
+              ),
+            ),
+            if(statusMessage == "success")
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Container(
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[50], // Background color
+                borderRadius: BorderRadius.circular(12.0), // Rounded corners
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                closetPieces,
+                style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,
                 ),
               ),
               ),

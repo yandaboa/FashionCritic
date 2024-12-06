@@ -61,7 +61,7 @@ class _ClosetState extends State<Closet> {
     return Scaffold(
         appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text("Virtual Closet", textDirection: TextDirection.ltr,),
+        title: const Text("Add to Virtual Closet", textDirection: TextDirection.ltr,),
         leading: BackButton(
             color: Colors.white,
             onPressed: () {
@@ -281,7 +281,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
 
     return Scaffold(
       appBar: StandardAppBar(
-        title: "Virtual Closet"),
+        title: "Add to Virtual Closet"),
       body: 
       SingleChildScrollView(
         child: Column( 
