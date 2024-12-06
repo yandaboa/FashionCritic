@@ -159,6 +159,31 @@ class _ImageViewPageState extends State<ImageViewPage> {
     openaiApiKey = dotenv.env['OPENAI_API_KEY']!;
   }
 
+  Future<List<double>> getEmbedding(String text) async {
+    final Uri embeddingsurl = Uri.parse("https://api.openai.com/v1/embeddings");
+    final embeddingsResponse = await http.post(
+      embeddingsurl,
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": 'Bearer $openaiApiKey',
+      },
+      body: jsonEncode({
+        'input': text,
+        'model': 'text-embedding-3-large',
+      }));
+    
+    if (embeddingsResponse.statusCode != 200) {
+      print('Error: ${embeddingsResponse.statusCode}');
+      print(embeddingsResponse.body);
+      return [];
+    }
+    
+    List<dynamic> embeddings = jsonDecode(embeddingsResponse.body)['data'][0]['embedding'];
+    List<double> vector = embeddings.map((e) => e as double).toList();
+
+    return vector;
+  }
+
   @override
   void _getFeedback() async {
     setState(() {
@@ -169,23 +194,10 @@ class _ImageViewPageState extends State<ImageViewPage> {
     await Future.delayed(const Duration(seconds: 1));
     String base64Image = base64Encode(imageBytes);
 
-    final Uri embeddingsurl = Uri.parse("https://api.openai.com/v1/embeddings");
-    final embeddingsResponse = await http.post(
-      embeddingsurl,
-      headers: {
-        'Content-Type': 'application/json',
-        "Authorization": 'Bearer $openaiApiKey',
-      },
-      body: jsonEncode({
-        'input': userInput,
-        'model': 'text-embedding-3-large',
-      }));
-    
-    if (embeddingsResponse.statusCode != 200) {
-      print('Error: ${embeddingsResponse.statusCode}');
-      print(embeddingsResponse.body);
+    List<double> vector = await getEmbedding(userInput);
+    if(vector.length == 0) {
       setState(() {
-        statusMessage = '${embeddingsResponse.statusCode} error while generating embeddings';
+        statusMessage = 'error generating embeddings';
       });
       await Future.delayed(const Duration(seconds: 1));
       setState(() {
@@ -194,9 +206,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
       });
       return;
     }
-    
-    List<dynamic> embeddings = jsonDecode(embeddingsResponse.body)['data'][0]['embedding'];
-    List<double> vector = embeddings.map((e) => e as double).toList();
+
     // print(jsonDecode(embeddingsResponse.body)['data'][0]['embedding']);
 
     // String sanityCheck = embeddings.toString();
@@ -204,8 +214,6 @@ class _ImageViewPageState extends State<ImageViewPage> {
     // print(sanityCheck.substring(sanityCheck.length - 10));
 
     // return;
-    print("done embedding:");
-    print(embeddings);
 
     setState(() {
       statusMessage = "Finding relevant style...";
@@ -437,7 +445,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
               ),
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                topAdvice,
+                'Top: $topAdvice',
                 style: const TextStyle(
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,
@@ -456,7 +464,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
               ),
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                bottomAdvice,
+                'Bottom: $bottomAdvice',
                 style: const TextStyle(
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,
@@ -475,7 +483,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
               ),
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                shoeAdvice,
+                'Shoes: $shoeAdvice',
                 style: const TextStyle(
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,
@@ -494,7 +502,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
               ),
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                accessoryAdvice,
+                'Accessories: $accessoryAdvice',
                 style: const TextStyle(
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,

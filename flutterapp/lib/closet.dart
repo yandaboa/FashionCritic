@@ -172,7 +172,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
             {
               'role': 'user',
               'content': [
-                {'type': 'text', 'text': 'Describe the clothing item in this image. Focus on one item, the most prominent one in the image. If there\'s no clothing item, output NONE'},
+                {'type': 'text', 'text': 'Breifly, describe the clothing item in this image. Focus on one item, the most prominent one in the image. If there\'s no clothing item, output NONE.\nOutput example 1:\nName: White Nike Air Forces with Green Swoosh\nDescription: Modern and casual sneakers with a white base and green Nike swoosh logo on the side.\nOutput example 2:\nName: Blue and White Striped Button-Up Shirt\nDescription: A casual button-up shirt with blue and white stripes.\nOutput example 3:\nNONE'},
                 {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}},
               ]
             }
@@ -205,7 +205,70 @@ class _ImageViewPageState extends State<ImageViewPage> {
     setState(() {
       status_message = 'Adding to closet...';
     });
-    await Future.delayed(Duration(seconds: 1));
+
+    final Uri embeddingsurl = Uri.parse("https://api.openai.com/v1/embeddings");
+    final embeddingsResponse = await http.post(
+      embeddingsurl,
+      headers: {
+        'Content-Type': 'application/json',
+        "Authorization": 'Bearer $openaiApiKey',
+      },
+      body: jsonEncode({
+        'input': description,
+        'model': 'text-embedding-3-large',
+      }));
+    
+    if (embeddingsResponse.statusCode != 200) {
+      setState(() {
+        status_message = 'Failed to add to closet: ${embeddingsResponse.statusCode}';
+      });
+      return;
+    }
+    
+    List<dynamic> embeddings = jsonDecode(embeddingsResponse.body)['data'][0]['embedding'];
+    List<double> vector = embeddings.map((e) => e as double).toList();
+
+    print(vector);
+
+    String pineconeAPIKey = dotenv.env['PINECONE_API_KEY']!;
+    String pineconeURL = dotenv.env['PINECONE_CLOSET_URL']!;
+
+    String name = description.split(":")[1].split("\n")[0].trim();
+    print(pineconeURL);
+    print(name);
+
+    final Uri pineconeurl = Uri.parse('$pineconeURL/vectors/upsert');
+    final pineconeResponse = await http.post(
+      pineconeurl,
+      headers: {
+        'Api-key': pineconeAPIKey,
+        'Content-Type': 'application/json',
+        // 'X-Pinecone-API-Version': '2024-07'
+      },
+      body: jsonEncode({
+        'vectors':[
+          {
+            'id': name,
+            'values': vector
+          }
+        ]
+        }
+      )
+    );
+
+    if(pineconeResponse.statusCode != 200) {
+      print('Error: ${pineconeResponse.statusCode}');
+      print(pineconeResponse.body);
+      setState(() {
+        status_message = 'error adding to closet (${pineconeResponse.statusCode})';
+      });
+      await Future.delayed(const Duration(seconds: 1));
+      setState(() {
+        isLoading = false;
+        status_message = "";
+      });
+      return;
+    }
 
     setState(() {
       status_message = 'Added to closet!';
@@ -254,7 +317,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
                 width: double.infinity,
                 child: Text(
                   description,
-                style: TextStyle(color: Colors.black, fontSize: 16),
+                style: TextStyle(color: Colors.black, fontSize: 15),
                 textAlign: TextAlign.center,
                 ),
               ),
@@ -262,7 +325,7 @@ class _ImageViewPageState extends State<ImageViewPage> {
             ),
             if (!isLoading && description.isNotEmpty && status_message.isEmpty && canAddToCloset)
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
                 child: 
                 FloatingActionButton.extended(
                   onPressed: () {
@@ -276,12 +339,12 @@ class _ImageViewPageState extends State<ImageViewPage> {
             if (status_message.isNotEmpty)
               Center(
               child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0,),
               child: SizedBox(
                 width: double.infinity,
                 child: Text(
                   status_message,
-                style: TextStyle(color: Colors.green, fontSize: 16),
+                style: TextStyle(color: Colors.green, fontSize: 14),
                 textAlign: TextAlign.center,
                 ),
               ),

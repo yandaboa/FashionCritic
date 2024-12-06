@@ -77,7 +77,13 @@ class _MyAppState extends State<MyApp> {
                 MaterialPageRoute(builder: (context) => Closet(context: context, cameras: cameras,)),
               );
             },
-            child: Icon(Icons.home))
+            child: Icon(Icons.home)),
+            ElevatedButton(onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => Closet(context: context, cameras: cameras,)),
+              );
+            },
+            child: const Icon(Icons.dataset))
           ]
         ),
       ),
